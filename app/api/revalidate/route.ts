@@ -1,42 +1,47 @@
+// app/api/revalidate/route.ts
 import { revalidateTag } from 'next/cache';
 import { NextRequest, NextResponse } from 'next/server';
 
-// This API route will be called by Sanity webhooks to trigger revalidation
 export async function POST(request: NextRequest) {
   try {
-    // Get the secret from the request to verify it's coming from Sanity
     const secret = request.nextUrl.searchParams.get('secret');
-    
-    // Check if the secret matches what you set in your Sanity webhook
+
     if (secret !== process.env.REVALIDATE_SECRET) {
       return NextResponse.json({ message: 'Invalid secret' }, { status: 401 });
     }
 
-    // Get the document type from the webhook payload
     const body = await request.json();
     const documentType = body._type;
+    const slug = body.slug?.current; // assuming slug is in body.slug.current
 
-    // Revalidate specific paths based on document type
+    // Revalidate by type or slug
     if (documentType === 'project') {
-      // Revalidate the projects page and all project pages
-      await revalidateTag('projects');
-      console.log('Revalidated projects');
+      if (slug) {
+        await revalidateTag(`project-${slug}`);
+        console.log(`Revalidated tag: project-${slug}`);
+      } else {
+        await revalidateTag('projects');
+        console.log('Revalidated tag: projects');
+      }
     } else if (documentType === 'page') {
-      // Revalidate all pages
-      await revalidateTag('pages');
-      console.log('Revalidated pages');
+      if (slug) {
+        await revalidateTag(`page-${slug}`);
+        console.log(`Revalidated tag: page-${slug}`);
+      } else {
+        await revalidateTag('pages');
+        console.log('Revalidated tag: pages');
+      }
+    } else {
+      console.log('Unknown document type. No tags revalidated.');
     }
 
-    return NextResponse.json({ 
-      message: 'Revalidation successful',
-      revalidated: true,
-      now: Date.now()
-    });
+    return NextResponse.json({ message: 'Revalidation successful', revalidated: true, now: Date.now() });
+
   } catch (error) {
     console.error('Error revalidating:', error);
-    return NextResponse.json({ 
+    return NextResponse.json({
       message: 'Error revalidating',
       error: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
-} 
+}
