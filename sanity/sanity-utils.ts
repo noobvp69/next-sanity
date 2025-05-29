@@ -40,7 +40,10 @@ console.log("Looking up project with slug:", slug);
         content
         
         }`,
-        { slug }
+        { slug },
+     {
+      next: { tags: [`project-${slug}`] }  // ✅ This must match your revalidation tag
+    }
     );
 }
 
